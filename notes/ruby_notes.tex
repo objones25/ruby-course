@@ -38,11 +38,13 @@
 % Header and footer
 \pagestyle{fancy}
 \fancyhf{}
-\setlength{\headheight}{14.49998pt}
-\addtolength{\topmargin}{-2.49998pt}
 \rhead{Ruby Programming Course Notes}
 \lhead{FreeCodeCamp}
 \cfoot{\thepage}
+
+% Fix header height warning
+\setlength{\headheight}{14.49998pt}
+\addtolength{\topmargin}{-2.49998pt}
 
 \title{\textbf{Ruby Programming Course Notes}\\
 \large Complete Beginner's Guide (Mac Edition)}
@@ -70,7 +72,7 @@ Mac computers come with Ruby pre-installed. To check your current Ruby version:
     \item Press Enter
 \end{enumerate}
 
-You should see output showing your Ruby version (e.g., ``ruby 2.7.0'').
+You should see output showing your Ruby version (e.g., "ruby 2.7.0").
 
 \subsection{Updating Ruby (Optional)}
 If you need a newer version of Ruby, use the Ruby Version Manager (RVM):
@@ -89,6 +91,964 @@ rvm install ruby
 rvm use ruby --default
 \end{lstlisting}
 
+\subsubsection{Performance Testing}
+
+\begin{lstlisting}
+# Using benchmark-ips for performance testing
+require 'benchmark/ips'
+
+# spec/performance/string_concatenation_spec.rb
+RSpec.describe 'String Concatenation Performance' do
+  let(:strings) { Array.new(1000) { "string_#{rand(1000)}" } }
+
+  it 'compares string concatenation methods' do
+    Benchmark.ips do |x|
+      x.report('Array#join') do
+        strings.join('')
+      end
+
+      x.report('String interpolation') do
+        result = ''
+        strings.each { |s| result = "#{result}#{s}" }
+        result
+      end
+
+      x.report('String +=') do
+        result = ''
+        strings.each { |s| result += s }
+        result
+      end
+
+      x.compare!
+    end
+  end
+end
+
+# Load testing with parallel execution
+RSpec.describe 'Concurrent User Processing' do
+  it 'handles multiple simultaneous requests' do
+    threads = []
+    results = []
+    mutex = Mutex.new
+
+    # Simulate 10 concurrent users
+    10.times do |i|
+      threads << Thread.new do
+        user = create(:user, email: "user#{i}@example.com")
+        service = UserProcessingService.new
+        result = service.process_user(user)
+        
+        mutex.synchronize do
+          results << result
+        end
+      end
+    end
+
+    threads.each(&:join)
+    
+    expect(results.length).to eq(10)
+    expect(results.all?(&:success?)).to be true
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Test Doubles and Mocking Strategies}
+
+\begin{lstlisting}
+# Different types of test doubles
+RSpec.describe 'Test Doubles Examples' do
+  describe 'method stubs' do
+    it 'stubs method return values' do
+      user = double('User')
+      allow(user).to receive(:name).and_return('John Doe')
+      allow(user).to receive(:age).and_return(30)
+      
+      expect(user.name).to eq('John Doe')
+      expect(user.age).to eq(30)
+    end
+  end
+
+  describe 'message expectations' do
+    it 'verifies method calls' do
+      email_service = double('EmailService')
+      expect(email_service).to receive(:send_email)
+        .with('user@example.com', 'Welcome!')
+        .once
+        
+      user_service = UserService.new(email_service)
+      user_service.welcome_user('user@example.com')
+    end
+  end
+
+  describe 'partial doubles' do
+    it 'stubs real object methods' do
+      user = create(:user)
+      allow(user).to receive(:external_api_call).and_return({ status: 'success' })
+      
+      result = user.sync_with_external_service
+      expect(result[:status]).to eq('success')
+    end
+  end
+
+  describe 'spy doubles' do
+    it 'records method calls for later verification' do
+      logger = spy('Logger')
+      
+      service = PaymentService.new(logger: logger)
+      service.process_payment(amount: 100)
+      
+      expect(logger).to have_received(:info).with(/Payment processed/)
+    end
+  end
+
+  describe 'null object pattern' do
+    it 'handles missing methods gracefully' do
+      null_logger = double('NullLogger').as_null_object
+      
+      service = PaymentService.new(logger: null_logger)
+      
+      # These won't raise errors even if methods don't exist
+      expect { service.process_payment(amount: 100) }.not_to raise_error
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Testing Asynchronous Code}
+
+\begin{lstlisting}
+# Testing background jobs
+RSpec.describe 'Background Job Testing' do
+  describe WelcomeEmailJob do
+    include ActiveJob::TestHelper
+
+    it 'enqueues welcome email job' do
+      expect {
+        UserService.new.create_user(email: 'test@example.com')
+      }.to have_enqueued_job(WelcomeEmailJob)
+        .with(hash_including(email: 'test@example.com'))
+    end
+
+    it 'processes job immediately in test' do
+      perform_enqueued_jobs do
+        UserService.new.create_user(email: 'test@example.com')
+      end
+      
+      expect(ActionMailer::Base.deliveries.count).to eq(1)
+    end
+
+    it 'processes job at specific time' do
+      travel_to 1.hour.from_now do
+        expect {
+          WelcomeEmailJob.set(wait: 1.hour).perform_later('test@example.com')
+        }.to have_enqueued_job.at(1.hour.from_now)
+      end
+    end
+  end
+end
+
+# Testing with timeouts and polling
+RSpec.describe 'Async Processing' do
+  it 'waits for async operation to complete' do
+    service = AsyncProcessingService.new
+    service.start_processing
+    
+    # Poll until completion or timeout
+    Timeout.timeout(5) do
+      loop do
+        break if service.processing_complete?
+        sleep 0.1
+      end
+    end
+    
+    expect(service.result).to be_present
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Database Testing Strategies}
+
+\begin{lstlisting}
+# Testing database constraints and triggers
+RSpec.describe 'Database Constraints' do
+  it 'enforces unique constraint at database level' do
+    create(:user, email: 'test@example.com')
+    
+    expect {
+      # Bypass ActiveRecord validations
+      User.connection.execute(
+        "INSERT INTO users (email, created_at, updated_at) 
+         VALUES ('test@example.com', NOW(), NOW())"
+      )
+    }.to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
+  it 'tests database triggers' do
+    user = create(:user)
+    
+    # Assuming we have a trigger that updates updated_at
+    User.connection.execute(
+      "UPDATE users SET email = 'new@example.com' WHERE id = #{user.id}"
+    )
+    
+    user.reload
+    expect(user.updated_at).to be > user.created_at
+  end
+end
+
+# Testing transactions and rollbacks
+RSpec.describe 'Transaction Testing' do
+  it 'rolls back on failure' do
+    initial_count = User.count
+    
+    expect {
+      User.transaction do
+        create(:user)
+        create(:user)
+        raise ActiveRecord::Rollback
+      end
+    }.not_to change(User, :count)
+    
+    expect(User.count).to eq(initial_count)
+  end
+
+  it 'handles nested transactions' do
+    User.transaction do
+      user1 = create(:user)
+      
+      expect {
+        User.transaction(requires_new: true) do
+          create(:user)
+          raise ActiveRecord::Rollback
+        end
+      }.not_to change(User, :count).from(User.count)
+      
+      expect(user1).to be_persisted
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Security Testing}
+
+\begin{lstlisting}
+# Testing authorization
+RSpec.describe 'Authorization Testing' do
+  let(:user) { create(:user) }
+  let(:admin) { create(:user, :admin) }
+  let(:other_user) { create(:user) }
+
+  describe 'access control' do
+    it 'allows users to access their own resources' do
+      post = create(:post, user: user)
+      
+      ability = Ability.new(user)
+      expect(ability.can?(:read, post)).to be true
+      expect(ability.can?(:update, post)).to be true
+    end
+
+    it 'prevents users from accessing others resources' do
+      post = create(:post, user: other_user)
+      
+      ability = Ability.new(user)
+      expect(ability.can?(:read, post)).to be true  # Public read
+      expect(ability.can?(:update, post)).to be false
+    end
+
+    it 'allows admins to access all resources' do
+      post = create(:post, user: user)
+      
+      ability = Ability.new(admin)
+      expect(ability.can?(:manage, post)).to be true
+    end
+  end
+end
+
+# Testing input sanitization
+RSpec.describe 'Input Sanitization' do
+  it 'prevents XSS attacks' do
+    malicious_input = '<script>alert("XSS")</script>'
+    
+    post '/posts', params: { post: { content: malicious_input } }
+    
+    created_post = Post.last
+    expect(created_post.content).not_to include('<script>')
+    expect(created_post.content).to include('&lt;script&gt;')
+  end
+
+  it 'prevents SQL injection' do
+    malicious_input = "'; DROP TABLE users; --"
+    
+    expect {
+      User.where("name = ?", malicious_input).to_a
+    }.not_to change(User, :count)
+  end
+end
+\end{lstlisting}
+
+\subsubsection{API Testing Best Practices}
+
+\begin{lstlisting}
+# Shared examples for API testing
+RSpec.shared_examples 'API authentication' do
+  context 'without authentication' do
+    it 'returns unauthorized status' do
+      subject
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+
+  context 'with invalid token' do
+    let(:auth_headers) { { 'Authorization' => 'Bearer invalid_token' } }
+    
+    it 'returns unauthorized status' do
+      subject
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
+end
+
+RSpec.shared_examples 'API error handling' do
+  it 'returns JSON error format' do
+    subject
+    
+    json_response = JSON.parse(response.body)
+    expect(json_response).to have_key('error')
+    expect(json_response).to have_key('message')
+  end
+end
+
+# API contract testing
+RSpec.describe 'API Contract Testing' do
+  describe 'GET /api/v1/users/:id' do
+    let(:user) { create(:user) }
+    let(:auth_headers) { { 'Authorization' => "Bearer #{user.auth_token}" } }
+    
+    subject { get "/api/v1/users/#{user.id}", headers: auth_headers }
+
+    include_examples 'API authentication'
+
+    context 'with valid authentication' do
+      it 'returns user data in expected format' do
+        subject
+        
+        json_response = JSON.parse(response.body)
+        user_data = json_response['user']
+        
+        # Test the contract structure
+        expect(user_data).to match({
+          'id' => user.id,
+          'email' => user.email,
+          'first_name' => user.first_name,
+          'last_name' => user.last_name,
+          'created_at' => user.created_at.iso8601,
+          'updated_at' => user.updated_at.iso8601
+        })
+      end
+
+      it 'does not expose sensitive data' do
+        subject
+        
+        json_response = JSON.parse(response.body)
+        user_data = json_response['user']
+        
+        expect(user_data).not_to have_key('password_digest')
+        expect(user_data).not_to have_key('auth_token')
+        expect(user_data).not_to have_key('reset_password_token')
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Custom Matchers}
+
+\begin{lstlisting}
+# spec/support/custom_matchers.rb
+RSpec::Matchers.define :be_a_valid_email do
+  match do |email|
+    email =~ /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
+  end
+
+  failure_message do |email|
+    "expected '#{email}' to be a valid email address"
+  end
+end
+
+RSpec::Matchers.define :have_error_on do |attribute|
+  match do |model|
+    model.valid?
+    model.errors[attribute].any?
+  end
+
+  failure_message do |model|
+    "expected #{model.class} to have error on #{attribute}, but it didn't"
+  end
+end
+
+RSpec::Matchers.define :contain_json do |expected|
+  match do |actual|
+    @actual_json = JSON.parse(actual)
+    expected.all? do |key, value|
+      @actual_json[key] == value
+    end
+  rescue JSON::ParserError
+    false
+  end
+
+  failure_message do |actual|
+    "expected JSON #{@actual_json} to contain #{expected}"
+  end
+end
+
+# Usage examples
+RSpec.describe 'Custom Matchers' do
+  it 'validates email format' do
+    expect('test@example.com').to be_a_valid_email
+    expect('invalid-email').not_to be_a_valid_email
+  end
+
+  it 'checks model errors' do
+    user = User.new(email: '')
+    expect(user).to have_error_on(:email)
+  end
+
+  it 'validates JSON response' do
+    json_response = '{"status": "success", "data": {"id": 1}}'
+    expect(json_response).to contain_json('status' => 'success')
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Continuous Integration Testing}
+
+\begin{lstlisting}
+# .github/workflows/test.yml
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.3
+        bundler-cache: true
+
+    - name: Setup Database
+      run: |
+        bundle exec rails db:create
+        bundle exec rails db:schema:load
+
+    - name: Run RuboCop
+      run: bundle exec rubocop
+
+    - name: Run Tests
+      run: |
+        bundle exec rspec --format progress \
+                         --format RspecJunitFormatter \
+                         --out tmp/rspec.xml
+
+    - name: Upload Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/coverage.xml
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results
+        path: tmp/rspec.xml
+\end{lstlisting}
+
+\subsubsection{Testing Checklist}
+
+\textbf{Before Writing Tests:}
+\begin{itemize}
+    \item Understand the requirement clearly
+    \item Identify edge cases and error scenarios
+    \item Plan test data setup strategy
+    \item Consider performance implications
+\end{itemize}
+
+\textbf{Test Quality Checklist:}
+\begin{itemize}
+    \item Tests are independent and can run in any order
+    \item Each test has a single, clear assertion
+    \item Test names describe the expected behavior
+    \item Setup data is minimal and relevant
+    \item Tests run quickly (under 100ms for unit tests)
+    \item No hardcoded dates or environment-specific values
+    \item Tests clean up after themselves
+\end{itemize}
+
+\textbf{Coverage Guidelines:}
+\begin{itemize}
+    \item Aim for 90\%+ line coverage
+    \item 100\% coverage of critical business logic
+    \item All public methods should have tests
+    \item Edge cases and error conditions covered
+    \item Integration points tested
+\end{itemize}
+
+\subsection{Debugging Advanced Techniques}
+
+\subsubsection{Advanced Pry Usage}
+
+\begin{lstlisting}
+# .pryrc file in home directory
+Pry.config.editor = 'code'  # or 'vim', 'nano', etc.
+
+# Custom commands
+Pry::Commands.create_command "sql" do
+  description "Execute SQL query"
+  def process(query)
+    result = ActiveRecord::Base.connection.execute(query)
+    ap result.to_a
+  end
+end
+
+# Useful pry commands in debugging sessions:
+# ls                    # List methods and variables
+# cd object            # Change scope to object
+# show-method method   # Show method source
+# edit method          # Edit method in editor
+# whereami             # Show current location
+# wtf?                 # Show last exception backtrace
+# hist                 # Show command history
+# $                    # Show last result
+\end{lstlisting}
+
+\subsubsection{Memory Debugging}
+
+\begin{lstlisting}
+# Using memory_profiler gem
+require 'memory_profiler'
+
+# Profile a block of code
+report = MemoryProfiler.report do
+  1000.times { User.new(name: "User") }
+end
+
+puts report.pretty_print
+
+# Profile specific methods
+class UserService
+  def self.profile_create_users
+    MemoryProfiler.report do
+      create_users(1000)
+    end.pretty_print
+  end
+end
+
+# Using allocation_tracer
+require 'allocation_tracer'
+
+AlocationTracer.trace do
+  # Your code here
+end
+\end{lstlisting}
+
+\subsubsection{Performance Profiling}
+
+\begin{lstlisting}
+# Using ruby-prof
+require 'ruby-prof'
+
+# Profile CPU time
+RubyProf.start
+# Your code here
+result = RubyProf.stop
+
+# Print a flat profile to text
+printer = RubyProf::FlatPrinter.new(result)
+printer.print(STDOUT)
+
+# Generate HTML report
+printer = RubyProf::GraphHtmlPrinter.new(result)
+File.open('profile.html', 'w') { |file| printer.print(file) }
+
+# Using benchmark-ips for micro-benchmarks
+require 'benchmark/ips'
+
+Benchmark.ips do |x|
+  x.report("String#gsub") { "hello world".gsub(/world/, "universe") }
+  x.report("String#sub")  { "hello world".sub(/world/, "universe") }
+  x.compare!
+end
+\end{lstlisting}
+
+\subsection{Ruby Concurrency and Threading}
+
+\subsubsection{Fiber-based Concurrency}
+
+\begin{lstlisting}
+# Basic fiber usage
+fiber = Fiber.new do |first|
+  second = Fiber.yield first + 2
+  Fiber.yield second + 3
+end
+
+puts fiber.resume(10)    # 12
+puts fiber.resume(5)     # 8
+puts fiber.resume        # nil (fiber dead)
+
+# Using fibers for lazy evaluation
+def fibonacci_fiber
+  Fiber.new do
+    a, b = 0, 1
+    loop do
+      Fiber.yield a
+      a, b = b, a + b
+    end
+  end
+end
+
+fib = fibonacci_fiber
+10.times { puts fib.resume }
+\end{lstlisting}
+
+\subsubsection{Thread Safety}
+
+\begin{lstlisting}
+# Thread-safe counter using Mutex
+class ThreadSafeCounter
+  def initialize
+    @count = 0
+    @mutex = Mutex.new
+  end
+
+  def increment
+    @mutex.synchronize do
+      @count += 1
+    end
+  end
+
+  def value
+    @mutex.synchronize { @count }
+  end
+end
+
+# Using Queue for thread communication
+queue = Queue.new
+
+# Producer thread
+producer = Thread.new do
+  10.times do |i|
+    queue.push("Item #{i}")
+    sleep(0.1)
+  end
+  queue.close
+end
+
+# Consumer threads
+consumers = 3.times.map do |id|
+  Thread.new do
+    while item = queue.pop
+      puts "Consumer #{id} processing #{item}"
+      sleep(0.2)
+    end
+  end
+end
+
+[producer, *consumers].each(&:join)
+\end{lstlisting}
+
+\subsection{Design Patterns in Ruby}
+
+\subsubsection{Observer Pattern}
+
+\begin{lstlisting}
+require 'observer'
+
+class User
+  include Observable
+  
+  attr_reader :name, :email
+  
+  def initialize(name, email)
+    @name = name
+    @email = email
+  end
+  
+  def update_email(new_email)
+    @email = new_email
+    changed
+    notify_observers(self, :email_changed)
+  end
+end
+
+class EmailNotifier
+  def update(user, event)
+    case event
+    when :email_changed
+      puts "Sending email confirmation to #{user.email}"
+    end
+  end
+end
+
+class AuditLogger
+  def update(user, event)
+    puts "Audit: User #{user.name} - #{event}"
+  end
+end
+
+# Usage
+user = User.new("John", "john@old.com")
+user.add_observer(EmailNotifier.new)
+user.add_observer(AuditLogger.new)
+
+user.update_email("john@new.com")
+\end{lstlisting}
+
+\subsubsection{Strategy Pattern}
+
+\begin{lstlisting}
+# Payment processing strategy
+class PaymentProcessor
+  def initialize(strategy)
+    @strategy = strategy
+  end
+  
+  def process(amount)
+    @strategy.process_payment(amount)
+  end
+end
+
+class CreditCardPayment
+  def process_payment(amount)
+    "Processing $#{amount} via Credit Card"
+  end
+end
+
+class PayPalPayment
+  def process_payment(amount)
+    "Processing $#{amount} via PayPal"
+  end
+end
+
+class BankTransferPayment
+  def process_payment(amount)
+    "Processing $#{amount} via Bank Transfer"
+  end
+end
+
+# Usage
+processor = PaymentProcessor.new(CreditCardPayment.new)
+puts processor.process(100)
+
+processor = PaymentProcessor.new(PayPalPayment.new)
+puts processor.process(100)
+\end{lstlisting}
+
+\subsubsection{Decorator Pattern}
+
+\begin{lstlisting}
+# Simple decorator using modules
+module Timestamped
+  def save
+    puts "Timestamp: #{Time.current}"
+    super
+  end
+end
+
+module Encrypted
+  def save
+    puts "Encrypting data..."
+    super
+  end
+end
+
+class Document
+  def save
+    puts "Saving document..."
+  end
+end
+
+# Usage
+doc = Document.new
+doc.extend(Timestamped)
+doc.extend(Encrypted)
+doc.save
+
+# Output:
+# Encrypting data...
+# Timestamp: 2024-01-01 12:00:00 UTC
+# Saving document...
+\end{lstlisting}
+
+\subsection{Functional Programming in Ruby}
+
+\subsubsection{Immutable Data Structures}
+
+\begin{lstlisting}
+# Creating immutable objects
+class ImmutableUser
+  attr_reader :name, :email
+  
+  def initialize(name:, email:)
+    @name = name.freeze
+    @email = email.freeze
+    freeze
+  end
+  
+  def with_email(new_email)
+    self.class.new(name: @name, email: new_email)
+  end
+end
+
+user = ImmutableUser.new(name: "John", email: "john@old.com")
+new_user = user.with_email("john@new.com")
+
+puts user.email      # john@old.com
+puts new_user.email  # john@new.com
+\end{lstlisting}
+
+\subsubsection{Functional Programming Techniques}
+
+\begin{lstlisting}
+# Higher-order functions
+def compose(f, g)
+  ->(x) { f.call(g.call(x)) }
+end
+
+add_one = ->(x) { x + 1 }
+multiply_by_two = ->(x) { x * 2 }
+
+# Compose functions
+add_then_multiply = compose(multiply_by_two, add_one)
+puts add_then_multiply.call(5)  # 12
+
+# Currying
+def curry_add(x)
+  ->(y) { x + y }
+end
+
+add_five = curry_add(5)
+puts add_five.call(10)  # 15
+
+# Using curry method
+multiply = ->(x, y) { x * y }
+multiply_curried = multiply.curry
+double = multiply_curried.call(2)
+puts double.call(5)  # 10
+\end{lstlisting}
+
+\subsection{Ruby Metaprogramming Deep Dive}
+
+\subsubsection{Dynamic Class Definition}
+
+\begin{lstlisting}
+# Creating classes dynamically
+def create_model_class(name, attributes)
+  klass = Class.new do
+    attr_accessor *attributes
+    
+    define_method :initialize do |**args|
+      attributes.each do |attr|
+        instance_variable_set("@#{attr}", args[attr])
+      end
+    end
+    
+    define_method :to_h do
+      attributes.each_with_object({}) do |attr, hash|
+        hash[attr] = instance_variable_get("@#{attr}")
+      end
+    end
+  end
+  
+  Object.const_set(name, klass)
+end
+
+# Usage
+create_model_class('Product', [:name, :price, :description])
+
+product = Product.new(
+  name: 'Laptop',
+  price: 999,
+  description: 'Gaming laptop'
+)
+
+puts product.to_h
+# {:name=>"Laptop", :price=>999, :description=>"Gaming laptop"}
+\end{lstlisting}
+
+\subsubsection{Module Builder Pattern}
+
+\begin{lstlisting}
+module Trackable
+  def self.included(base)
+    base.extend(ClassMethods)
+    base.include(InstanceMethods)
+  end
+
+  module ClassMethods
+    def track(*methods)
+      methods.each do |method|
+        alias_method "#{method}_without_tracking", method
+        
+        define_method method do |*args, &block|
+          puts "Calling #{method} with #{args}"
+          result = send("#{method}_without_tracking", *args, &block)
+          puts "#{method} returned: #{result}"
+          result
+        end
+      end
+    end
+  end
+
+  module InstanceMethods
+    def tracking_enabled?
+      true
+    end
+  end
+end
+
+class Calculator
+  include Trackable
+  
+  def add(a, b)
+    a + b
+  end
+  
+  def multiply(a, b)
+    a * b
+  end
+  
+  track :add, :multiply
+end
+
+calc = Calculator.new
+calc.add(2, 3)      # Logs method call and result
+calc.multiply(4, 5) # Logs method call and result
+\end{lstlisting}
+
 \section{Development Environment Setup}
 
 \subsection{Text Editor: Atom}
@@ -99,7 +1059,7 @@ rvm use ruby --default
     \item Install the \texttt{atom-runner} package:
     \begin{itemize}
         \item Go to Atom $\rightarrow$ Preferences $\rightarrow$ Install
-        \item Search for ``atom-runner''
+        \item Search for "atom-runner"
         \item Click Install
     \end{itemize}
 \end{enumerate}
@@ -253,7 +1213,7 @@ puts 5 + 9      # Addition: 14
 puts 5 - 2      # Subtraction: 3
 puts 5 * 3      # Multiplication: 15
 puts 10 / 3     # Division: 3 (integer division)
-puts 10.0 / 3   # Division: 3.333\ldots{} (float division)
+puts 10.0 / 3   # Division: 3.333... (float division)
 
 # Exponents
 puts 2 ** 3     # 2 to the power of 3: 8
@@ -939,8 +1899,8 @@ double_lambda = lambda { |x| x * 2 }
 double_lambda = ->(x) { x * 2 }
 
 # Key differences:
-# -- Lambdas check argument count, procs don't
-# -- return in lambda returns from lambda, in proc returns from enclosing method
+# - Lambdas check argument count, procs don't
+# - return in lambda returns from lambda, in proc returns from enclosing method
 \end{lstlisting}
 
 \subsubsection{Metaprogramming Basics}
@@ -1004,39 +1964,947 @@ end
 Fibonacci.new.take(10)  # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
 \end{lstlisting}
 
-\subsection{Testing Frameworks}
+\subsection{Comprehensive Testing Guide}
 
-\subsubsection{RSpec (Industry Standard)}
+\subsubsection{Testing Philosophy and Types}
 
-Install and setup:
+Ruby testing follows a pyramid structure:
+\begin{itemize}
+    \item \textbf{Unit Tests} - Test individual methods and classes in isolation
+    \item \textbf{Integration Tests} - Test interaction between components
+    \item \textbf{System Tests} - Test complete user workflows (end-to-end)
+\end{itemize}
+
+\subsubsection{RSpec Framework (Industry Standard)}
+
+\textbf{Installation and Setup:}
 \begin{lstlisting}[language=bash]
 # Add to Gemfile
-gem 'rspec'
+group :development, :test do
+  gem 'rspec-rails'
+  gem 'factory_bot_rails'
+  gem 'faker'
+  gem 'shoulda-matchers'
+end
 
-# Generate RSpec configuration
-rspec --init
+group :test do
+  gem 'capybara'
+  gem 'webmock'
+  gem 'vcr'
+  gem 'database_cleaner-active_record'
+end
+
+# Initialize RSpec
+rails generate rspec:install
 \end{lstlisting}
 
-Basic RSpec example:
+\textbf{RSpec Configuration:}
 \begin{lstlisting}
-# spec/calculator_spec.rb
-require 'rspec'
+# spec/spec_helper.rb
+RSpec.configure do |config|
+  config.expect_with :rspec do |expectations|
+    expectations.include_chain_clauses_in_custom_matcher_descriptions = true
+  end
 
-describe Calculator do
-  describe '#add' do
-    it 'adds two numbers correctly' do
-      calculator = Calculator.new
-      result = calculator.add(2, 3)
-      expect(result).to eq(5)
+  config.mock_with :rspec do |mocks|
+    mocks.verify_partial_doubles = true
+  end
+
+  config.shared_context_metadata_behavior = :apply_to_host_groups
+  config.filter_run_when_matching :focus
+  config.example_status_persistence_file_path = "spec/examples.txt"
+  config.disable_monkey_patching!
+  config.warnings = true
+  
+  if config.files_to_run.one?
+    config.default_formatter = "doc"
+  end
+  
+  config.profile_examples = 10
+  config.order = :random
+  Kernel.srand config.seed
+end
+\end{lstlisting}
+
+\textbf{Rails Helper Configuration:}
+\begin{lstlisting}
+# spec/rails_helper.rb
+require 'spec_helper'
+ENV['RAILS_ENV'] ||= 'test'
+require_relative '../config/environment'
+abort("Rails is running in production mode!") if Rails.env.production?
+require 'rspec/rails'
+
+# Database cleaner setup
+require 'database_cleaner/active_record'
+
+RSpec.configure do |config|
+  config.fixture_path = "#{::Rails.root}/spec/fixtures"
+  config.use_transactional_fixtures = false
+  config.infer_spec_type_from_file_location!
+  config.filter_rails_from_backtrace!
+
+  # Database cleaner configuration
+  config.before(:suite) do
+    DatabaseCleaner.strategy = :transaction
+    DatabaseCleaner.clean_with(:truncation)
+  end
+
+  config.around(:each) do |example|
+    DatabaseCleaner.cleaning do
+      example.run
     end
+  end
+end
+
+# Shoulda matchers configuration
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Unit Testing Deep Dive}
+
+\textbf{Testing Models:}
+\begin{lstlisting}
+# spec/models/user_spec.rb
+require 'rails_helper'
+
+RSpec.describe User, type: :model do
+  describe 'validations' do
+    it { should validate_presence_of(:email) }
+    it { should validate_uniqueness_of(:email).case_insensitive }
+    it { should validate_length_of(:password).is_at_least(8) }
     
-    context 'with negative numbers' do
-      it 'handles negative numbers' do
-        calculator = Calculator.new
-        result = calculator.add(-2, 3)
-        expect(result).to eq(1)
+    it 'validates email format' do
+      user = build(:user, email: 'invalid-email')
+      expect(user).not_to be_valid
+      expect(user.errors[:email]).to include('is invalid')
+    end
+  end
+
+  describe 'associations' do
+    it { should have_many(:posts).dependent(:destroy) }
+    it { should belong_to(:organization) }
+  end
+
+  describe 'scopes' do
+    let!(:active_user) { create(:user, active: true) }
+    let!(:inactive_user) { create(:user, active: false) }
+
+    describe '.active' do
+      it 'returns only active users' do
+        expect(User.active).to include(active_user)
+        expect(User.active).not_to include(inactive_user)
       end
     end
+  end
+
+  describe 'instance methods' do
+    let(:user) { create(:user, first_name: 'John', last_name: 'Doe') }
+
+    describe '#full_name' do
+      it 'returns the concatenated first and last name' do
+        expect(user.full_name).to eq('John Doe')
+      end
+
+      context 'when last name is missing' do
+        let(:user) { create(:user, first_name: 'John', last_name: nil) }
+
+        it 'returns only the first name' do
+          expect(user.full_name).to eq('John')
+        end
+      end
+    end
+
+    describe '#admin?' do
+      context 'when user has admin role' do
+        let(:user) { create(:user, role: 'admin') }
+
+        it 'returns true' do
+          expect(user.admin?).to be true
+        end
+      end
+
+      context 'when user does not have admin role' do
+        let(:user) { create(:user, role: 'member') }
+
+        it 'returns false' do
+          expect(user.admin?).to be false
+        end
+      end
+    end
+  end
+
+  describe 'callbacks' do
+    describe 'before_save' do
+      it 'downcases the email' do
+        user = create(:user, email: 'TEST@EXAMPLE.COM')
+        expect(user.email).to eq('test@example.com')
+      end
+    end
+
+    describe 'after_create' do
+      it 'sends welcome email' do
+        expect {
+          create(:user)
+        }.to change { ActionMailer::Base.deliveries.count }.by(1)
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\textbf{Testing Services and POROs:}
+\begin{lstlisting}
+# app/services/payment_processor.rb
+class PaymentProcessor
+  def initialize(payment_gateway:, logger: Rails.logger)
+    @payment_gateway = payment_gateway
+    @logger = logger
+  end
+
+  def process(payment_data)
+    validate_payment_data(payment_data)
+    
+    result = @payment_gateway.charge(payment_data)
+    
+    if result.success?
+      @logger.info("Payment processed successfully: #{result.transaction_id}")
+      { success: true, transaction_id: result.transaction_id }
+    else
+      @logger.error("Payment failed: #{result.error_message}")
+      { success: false, error: result.error_message }
+    end
+  rescue StandardError => e
+    @logger.error("Payment processing error: #{e.message}")
+    { success: false, error: 'Payment processing failed' }
+  end
+
+  private
+
+  def validate_payment_data(data)
+    raise ArgumentError, 'Amount is required' unless data[:amount]
+    raise ArgumentError, 'Invalid amount' if data[:amount] <= 0
+  end
+end
+
+# spec/services/payment_processor_spec.rb
+require 'rails_helper'
+
+RSpec.describe PaymentProcessor do
+  let(:payment_gateway) { double('PaymentGateway') }
+  let(:logger) { double('Logger') }
+  let(:processor) { described_class.new(payment_gateway: payment_gateway, logger: logger) }
+  let(:payment_data) { { amount: 100, card_number: '1234567890123456' } }
+
+  describe '#process' do
+    context 'when payment is successful' do
+      let(:gateway_result) { double('Result', success?: true, transaction_id: 'txn_123') }
+
+      before do
+        allow(payment_gateway).to receive(:charge).and_return(gateway_result)
+        allow(logger).to receive(:info)
+      end
+
+      it 'returns success result with transaction ID' do
+        result = processor.process(payment_data)
+        
+        expect(result).to eq({
+          success: true,
+          transaction_id: 'txn_123'
+        })
+      end
+
+      it 'logs successful payment' do
+        processor.process(payment_data)
+        
+        expect(logger).to have_received(:info)
+          .with("Payment processed successfully: txn_123")
+      end
+
+      it 'calls payment gateway with correct data' do
+        processor.process(payment_data)
+        
+        expect(payment_gateway).to have_received(:charge).with(payment_data)
+      end
+    end
+
+    context 'when payment fails' do
+      let(:gateway_result) { double('Result', success?: false, error_message: 'Insufficient funds') }
+
+      before do
+        allow(payment_gateway).to receive(:charge).and_return(gateway_result)
+        allow(logger).to receive(:error)
+      end
+
+      it 'returns failure result with error message' do
+        result = processor.process(payment_data)
+        
+        expect(result).to eq({
+          success: false,
+          error: 'Insufficient funds'
+        })
+      end
+
+      it 'logs payment failure' do
+        processor.process(payment_data)
+        
+        expect(logger).to have_received(:error)
+          .with("Payment failed: Insufficient funds")
+      end
+    end
+
+    context 'when payment data is invalid' do
+      before do
+        allow(logger).to receive(:error)
+      end
+
+      it 'raises error for missing amount' do
+        invalid_data = payment_data.except(:amount)
+        
+        result = processor.process(invalid_data)
+        
+        expect(result).to eq({
+          success: false,
+          error: 'Payment processing failed'
+        })
+      end
+
+      it 'raises error for zero amount' do
+        invalid_data = payment_data.merge(amount: 0)
+        
+        result = processor.process(invalid_data)
+        
+        expect(result).to eq({
+          success: false,
+          error: 'Payment processing failed'
+        })
+      end
+    end
+
+    context 'when gateway raises an exception' do
+      before do
+        allow(payment_gateway).to receive(:charge).and_raise(StandardError, 'Network error')
+        allow(logger).to receive(:error)
+      end
+
+      it 'handles the exception gracefully' do
+        result = processor.process(payment_data)
+        
+        expect(result).to eq({
+          success: false,
+          error: 'Payment processing failed'
+        })
+      end
+
+      it 'logs the error' do
+        processor.process(payment_data)
+        
+        expect(logger).to have_received(:error)
+          .with("Payment processing error: Network error")
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Integration Testing}
+
+\textbf{Testing Controllers:}
+\begin{lstlisting}
+# spec/controllers/users_controller_spec.rb
+require 'rails_helper'
+
+RSpec.describe UsersController, type: :controller do
+  let(:user) { create(:user) }
+  let(:admin) { create(:user, role: 'admin') }
+
+  describe 'GET #index' do
+    context 'when user is admin' do
+      before { sign_in admin }
+
+      it 'returns success status' do
+        get :index
+        expect(response).to have_http_status(:success)
+      end
+
+      it 'assigns all users' do
+        user1 = create(:user)
+        user2 = create(:user)
+        
+        get :index
+        
+        expect(assigns(:users)).to include(user1, user2, admin)
+      end
+    end
+
+    context 'when user is not admin' do
+      before { sign_in user }
+
+      it 'redirects to root path' do
+        get :index
+        expect(response).to redirect_to(root_path)
+      end
+
+      it 'sets flash error message' do
+        get :index
+        expect(flash[:alert]).to eq('Access denied')
+      end
+    end
+
+    context 'when user is not signed in' do
+      it 'redirects to sign in page' do
+        get :index
+        expect(response).to redirect_to(new_user_session_path)
+      end
+    end
+  end
+
+  describe 'POST #create' do
+    let(:valid_params) { { user: attributes_for(:user) } }
+    let(:invalid_params) { { user: attributes_for(:user, email: '') } }
+
+    context 'with valid parameters' do
+      it 'creates a new user' do
+        expect {
+          post :create, params: valid_params
+        }.to change(User, :count).by(1)
+      end
+
+      it 'redirects to user page' do
+        post :create, params: valid_params
+        expect(response).to redirect_to(user_path(User.last))
+      end
+
+      it 'sets success flash message' do
+        post :create, params: valid_params
+        expect(flash[:notice]).to eq('User created successfully')
+      end
+    end
+
+    context 'with invalid parameters' do
+      it 'does not create a user' do
+        expect {
+          post :create, params: invalid_params
+        }.not_to change(User, :count)
+      end
+
+      it 'renders new template' do
+        post :create, params: invalid_params
+        expect(response).to render_template(:new)
+      end
+
+      it 'assigns user with errors' do
+        post :create, params: invalid_params
+        expect(assigns(:user).errors).not_to be_empty
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\textbf{Testing API Endpoints:}
+\begin{lstlisting}
+# spec/requests/api/v1/users_spec.rb
+require 'rails_helper'
+
+RSpec.describe 'API::V1::Users', type: :request do
+  let(:user) { create(:user) }
+  let(:auth_headers) { { 'Authorization' => "Bearer #{user.auth_token}" } }
+
+  describe 'GET /api/v1/users' do
+    let!(:users) { create_list(:user, 3) }
+
+    context 'with valid authentication' do
+      before { get '/api/v1/users', headers: auth_headers }
+
+      it 'returns success status' do
+        expect(response).to have_http_status(:ok)
+      end
+
+      it 'returns users data' do
+        json_response = JSON.parse(response.body)
+        expect(json_response['users'].length).to eq(4) # 3 created + 1 authenticated user
+      end
+
+      it 'returns correct user structure' do
+        json_response = JSON.parse(response.body)
+        user_data = json_response['users'].first
+        
+        expect(user_data).to include(
+          'id',
+          'email',
+          'first_name',
+          'last_name',
+          'created_at'
+        )
+        expect(user_data).not_to include('password_digest')
+      end
+    end
+
+    context 'without authentication' do
+      before { get '/api/v1/users' }
+
+      it 'returns unauthorized status' do
+        expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'returns error message' do
+        json_response = JSON.parse(response.body)
+        expect(json_response['error']).to eq('Authentication required')
+      end
+    end
+  end
+
+  describe 'POST /api/v1/users' do
+    let(:valid_params) do
+      {
+        user: {
+          email: 'test@example.com',
+          password: 'password123',
+          first_name: 'Test',
+          last_name: 'User'
+        }
+      }
+    end
+
+    context 'with valid parameters' do
+      it 'creates a new user' do
+        expect {
+          post '/api/v1/users', params: valid_params
+        }.to change(User, :count).by(1)
+      end
+
+      it 'returns created status' do
+        post '/api/v1/users', params: valid_params
+        expect(response).to have_http_status(:created)
+      end
+
+      it 'returns user data' do
+        post '/api/v1/users', params: valid_params
+        json_response = JSON.parse(response.body)
+        
+        expect(json_response['user']['email']).to eq('test@example.com')
+        expect(json_response['user']['first_name']).to eq('Test')
+      end
+    end
+
+    context 'with invalid parameters' do
+      let(:invalid_params) { { user: { email: '', password: '123' } } }
+
+      it 'does not create a user' do
+        expect {
+          post '/api/v1/users', params: invalid_params
+        }.not_to change(User, :count)
+      end
+
+      it 'returns unprocessable entity status' do
+        post '/api/v1/users', params: invalid_params
+        expect(response).to have_http_status(:unprocessable_entity)
+      end
+
+      it 'returns validation errors' do
+        post '/api/v1/users', params: invalid_params
+        json_response = JSON.parse(response.body)
+        
+        expect(json_response['errors']).to include('email')
+        expect(json_response['errors']).to include('password')
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{System/Feature Testing with Capybara}
+
+\begin{lstlisting}
+# spec/system/user_registration_spec.rb
+require 'rails_helper'
+
+RSpec.describe 'User Registration', type: :system do
+  before do
+    driven_by(:selenium_chrome_headless)
+  end
+
+  describe 'successful registration' do
+    it 'allows user to create an account' do
+      visit new_user_registration_path
+
+      fill_in 'Email', with: 'test@example.com'
+      fill_in 'Password', with: 'password123'
+      fill_in 'Password confirmation', with: 'password123'
+      fill_in 'First name', with: 'John'
+      fill_in 'Last name', with: 'Doe'
+
+      click_button 'Sign up'
+
+      expect(page).to have_content('Welcome! You have signed up successfully.')
+      expect(page).to have_current_path(root_path)
+      expect(page).to have_content('John Doe')
+    end
+
+    it 'sends welcome email' do
+      visit new_user_registration_path
+
+      fill_in 'Email', with: 'test@example.com'
+      fill_in 'Password', with: 'password123'
+      fill_in 'Password confirmation', with: 'password123'
+      fill_in 'First name', with: 'John'
+      fill_in 'Last name', with: 'Doe'
+
+      expect {
+        click_button 'Sign up'
+      }.to change { ActionMailer::Base.deliveries.count }.by(1)
+
+      welcome_email = ActionMailer::Base.deliveries.last
+      expect(welcome_email.to).to include('test@example.com')
+      expect(welcome_email.subject).to eq('Welcome to Our Platform')
+    end
+  end
+
+  describe 'validation errors' do
+    it 'shows errors for invalid input' do
+      visit new_user_registration_path
+
+      fill_in 'Email', with: 'invalid-email'
+      fill_in 'Password', with: '123'
+      click_button 'Sign up'
+
+      expect(page).to have_content('Email is invalid')
+      expect(page).to have_content('Password is too short')
+      expect(page).to have_current_path(user_registration_path)
+    end
+
+    it 'shows error for duplicate email' do
+      existing_user = create(:user, email: 'test@example.com')
+
+      visit new_user_registration_path
+
+      fill_in 'Email', with: 'test@example.com'
+      fill_in 'Password', with: 'password123'
+      fill_in 'Password confirmation', with: 'password123'
+      click_button 'Sign up'
+
+      expect(page).to have_content('Email has already been taken')
+    end
+  end
+
+  describe 'JavaScript interactions' do
+    it 'validates email format in real-time', js: true do
+      visit new_user_registration_path
+
+      email_field = find('#user_email')
+      email_field.fill_in(with: 'invalid-email')
+      email_field.trigger('blur')
+
+      expect(page).to have_css('.field_with_errors')
+      expect(page).to have_content('Please enter a valid email address')
+    end
+
+    it 'shows password strength indicator', js: true do
+      visit new_user_registration_path
+
+      password_field = find('#user_password')
+      password_field.fill_in(with: 'weak')
+
+      expect(page).to have_css('.password-strength.weak')
+
+      password_field.fill_in(with: 'StrongPassword123!')
+
+      expect(page).to have_css('.password-strength.strong')
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Test Data Management with FactoryBot}
+
+\begin{lstlisting}
+# spec/factories/users.rb
+FactoryBot.define do
+  factory :user do
+    sequence(:email) { |n| "user#{n}@example.com" }
+    first_name { Faker::Name.first_name }
+    last_name { Faker::Name.last_name }
+    password { 'password123' }
+    active { true }
+    role { 'member' }
+
+    trait :admin do
+      role { 'admin' }
+    end
+
+    trait :inactive do
+      active { false }
+    end
+
+    trait :with_posts do
+      after(:create) do |user|
+        create_list(:post, 3, user: user)
+      end
+    end
+
+    factory :admin_user, traits: [:admin]
+    factory :inactive_user, traits: [:inactive]
+  end
+end
+
+# spec/factories/posts.rb
+FactoryBot.define do
+  factory :post do
+    title { Faker::Lorem.sentence }
+    content { Faker::Lorem.paragraphs(number: 3).join("\n\n") }
+    published { true }
+    association :user
+
+    trait :draft do
+      published { false }
+    end
+
+    trait :with_comments do
+      after(:create) do |post|
+        create_list(:comment, 5, post: post)
+      end
+    end
+
+    factory :draft_post, traits: [:draft]
+    factory :post_with_comments, traits: [:with_comments]
+  end
+end
+
+# Usage examples:
+user = create(:user)                    # Creates user with default attributes
+admin = create(:admin_user)             # Creates user with admin role
+user_with_posts = create(:user, :with_posts)  # Creates user with 3 posts
+users = create_list(:user, 5)          # Creates 5 users
+
+# Build vs Create
+built_user = build(:user)               # Builds object without saving
+created_user = create(:user)            # Creates and saves to database
+attributes = attributes_for(:user)      # Returns hash of attributes
+\end{lstlisting}
+
+\subsubsection{Mocking and Stubbing External Services}
+
+\begin{lstlisting}
+# Using WebMock for HTTP requests
+# spec/support/webmock.rb
+require 'webmock/rspec'
+
+RSpec.configure do |config|
+  config.before(:each) do
+    WebMock.disable_net_connect!(allow_localhost: true)
+  end
+end
+
+# Example usage in specs
+RSpec.describe ExternalApiService do
+  describe '#fetch_user_data' do
+    let(:service) { described_class.new }
+    let(:user_id) { 123 }
+    let(:api_response) do
+      {
+        id: user_id,
+        name: 'John Doe',
+        email: 'john@example.com'
+      }.to_json
+    end
+
+    before do
+      stub_request(:get, "https://api.example.com/users/#{user_id}")
+        .with(headers: { 'Authorization' => 'Bearer token123' })
+        .to_return(
+          status: 200,
+          body: api_response,
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'fetches user data from external API' do
+      result = service.fetch_user_data(user_id)
+
+      expect(result[:name]).to eq('John Doe')
+      expect(result[:email]).to eq('john@example.com')
+    end
+
+    context 'when API returns error' do
+      before do
+        stub_request(:get, "https://api.example.com/users/#{user_id}")
+          .to_return(status: 404, body: '{"error": "User not found"}')
+      end
+
+      it 'handles API errors gracefully' do
+        expect {
+          service.fetch_user_data(user_id)
+        }.to raise_error(ExternalApiService::UserNotFoundError)
+      end
+    end
+  end
+end
+
+# Using VCR for recording real HTTP interactions
+# spec/support/vcr.rb
+require 'vcr'
+
+VCR.configure do |config|
+  config.cassette_library_dir = 'spec/vcr_cassettes'
+  config.hook_into :webmock
+  config.ignore_localhost = true
+  config.configure_rspec_metadata!
+  
+  # Filter sensitive data
+  config.filter_sensitive_data('<API_KEY>') { ENV['API_KEY'] }
+  config.filter_sensitive_data('<AUTH_TOKEN>') { ENV['AUTH_TOKEN'] }
+end
+
+# Usage in specs
+RSpec.describe WeatherService, vcr: true do
+  describe '#current_weather' do
+    it 'fetches current weather data' do
+      VCR.use_cassette('weather_service/current_weather') do
+        weather = WeatherService.new.current_weather('New York')
+        expect(weather[:temperature]).to be_a(Numeric)
+        expect(weather[:condition]).to be_present
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Testing Best Practices}
+
+\textbf{Test Organization:}
+\begin{lstlisting}
+# Good test structure
+RSpec.describe SomeClass do
+  # Use let for test data setup
+  let(:user) { create(:user) }
+  let(:service) { described_class.new(user) }
+
+  # Group related tests
+  describe '#public_method' do
+    context 'when condition A' do
+      it 'does something specific' do
+        # Arrange
+        setup_data
+        
+        # Act
+        result = service.public_method
+        
+        # Assert
+        expect(result).to eq(expected_value)
+      end
+    end
+
+    context 'when condition B' do
+      it 'does something else' do
+        # Test implementation
+      end
+    end
+  end
+
+  describe 'private methods' do
+    # Only test private methods if absolutely necessary
+    # Usually through public interface
+  end
+end
+\end{lstlisting}
+
+\textbf{Common Testing Patterns:}
+\begin{lstlisting}
+# Testing callbacks
+it 'triggers callback' do
+  expect(user).to receive(:send_welcome_email)
+  user.save
+end
+
+# Testing state changes
+it 'changes user status' do
+  expect {
+    service.activate_user
+  }.to change(user, :status).from('pending').to('active')
+end
+
+# Testing side effects
+it 'creates audit log' do
+  expect {
+    service.delete_user
+  }.to change(AuditLog, :count).by(1)
+end
+
+# Testing exception handling
+it 'raises specific error' do
+  expect {
+    service.invalid_operation
+  }.to raise_error(ServiceError, 'Operation not allowed')
+end
+
+# Testing with time
+it 'sets timestamp correctly' do
+  freeze_time do
+    service.mark_completed
+    expect(task.completed_at).to eq(Time.current)
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Minitest Alternative}
+
+For those preferring Minitest over RSpec:
+
+\begin{lstlisting}
+# test/models/user_test.rb
+require 'test_helper'
+
+class UserTest < ActiveSupport::TestCase
+  def setup
+    @user = users(:john)
+  end
+
+  test 'should be valid with valid attributes' do
+    assert @user.valid?
+  end
+
+  test 'should require email' do
+    @user.email = nil
+    assert_not @user.valid?
+    assert_includes @user.errors[:email], "can't be blank"
+  end
+
+  test 'should return full name' do
+    @user.first_name = 'John'
+    @user.last_name = 'Doe'
+    assert_equal 'John Doe', @user.full_name
+  end
+
+  test 'should create user with factory' do
+    user = create(:user)
+    assert user.persisted?
+    assert user.valid?
+  end
+end
+
+# test/integration/user_flows_test.rb
+class UserFlowsTest < ActionDispatch::IntegrationTest
+  test 'user registration flow' do
+    get new_user_registration_path
+    assert_response :success
+
+    post user_registration_path, params: {
+      user: {
+        email: 'test@example.com',
+        password: 'password123',
+        password_confirmation: 'password123'
+      }
+    }
+
+    assert_redirected_to root_path
+    follow_redirect!
+    assert_match 'Welcome', response.body
   end
 end
 \end{lstlisting}
@@ -1253,11 +3121,11 @@ bundle gem my_gem
 # Gem structure
 my_gem/
 |-- lib/
-|   \-- my_gem.rb
+|   `-- my_gem.rb
 |-- spec/
 |-- my_gem.gemspec
 |-- Gemfile
-\-- README.md
+`-- README.md
 
 # Build and publish
 gem build my_gem.gemspec
