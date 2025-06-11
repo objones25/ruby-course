@@ -1,0 +1,1315 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+% Code styling
+\lstdefinestyle{rubystyle}{
+    language=Ruby,
+    backgroundcolor=\color{gray!10},
+    commentstyle=\color{green!60!black},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{gray},
+    stringstyle=\color{red},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black!30}
+}
+\lstset{style=rubystyle}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{14.49998pt}
+\addtolength{\topmargin}{-2.49998pt}
+\rhead{Ruby Programming Course Notes}
+\lhead{FreeCodeCamp}
+\cfoot{\thepage}
+
+\title{\textbf{Ruby Programming Course Notes}\\
+\large Complete Beginner's Guide (Mac Edition)}
+\author{Based on FreeCodeCamp Course}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+Ruby is an extremely popular programming language and the foundation behind Ruby on Rails, one of the most popular web development frameworks. This course covers everything from basic installation to advanced object-oriented programming concepts.
+
+\section{Installation on Mac}
+
+\subsection{Checking Existing Installation}
+Mac computers come with Ruby pre-installed. To check your current Ruby version:
+
+\begin{enumerate}
+    \item Open Terminal (search for "Terminal" in Spotlight)
+    \item Type: \texttt{ruby -v}
+    \item Press Enter
+\end{enumerate}
+
+You should see output showing your Ruby version (e.g., ``ruby 2.7.0'').
+
+\subsection{Updating Ruby (Optional)}
+If you need a newer version of Ruby, use the Ruby Version Manager (RVM):
+
+\begin{lstlisting}[language=bash]
+# Install RVM
+\curl -sSL https://get.rvm.io | bash -s stable
+
+# Reload your terminal or run:
+source ~/.rvm/scripts/rvm
+
+# Install latest Ruby
+rvm install ruby
+
+# Use the new version
+rvm use ruby --default
+\end{lstlisting}
+
+\section{Development Environment Setup}
+
+\subsection{Text Editor: Atom}
+\begin{enumerate}
+    \item Visit \texttt{atom.io}
+    \item Download for Mac
+    \item Move to Applications folder
+    \item Install the \texttt{atom-runner} package:
+    \begin{itemize}
+        \item Go to Atom $\rightarrow$ Preferences $\rightarrow$ Install
+        \item Search for ``atom-runner''
+        \item Click Install
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Your First Ruby Program}
+
+Create a new file with \texttt{.rb} extension:
+
+\begin{lstlisting}
+# hello.rb
+print "Hello World"
+\end{lstlisting}
+
+Run with Ctrl+R in Atom (using atom-runner) or in Terminal:
+\begin{lstlisting}[language=bash]
+ruby hello.rb
+\end{lstlisting}
+
+\section{Basic Ruby Concepts}
+
+\subsection{Printing Output}
+
+\begin{lstlisting}
+# print - no newline after output
+print "Hello"
+print "World"  # Output: HelloWorld
+
+# puts - adds newline after output
+puts "Hello"
+puts "World"   # Output: 
+               # Hello
+               # World
+\end{lstlisting}
+
+\subsection{Drawing with Text}
+
+\begin{lstlisting}
+puts "    /|"
+puts "   / |"
+puts "  /  |"
+puts " /   |"
+puts "/____|"
+# Creates a simple triangle
+\end{lstlisting}
+
+\section{Variables}
+
+Variables are containers for storing data values:
+
+\begin{lstlisting}
+# Variable assignment
+character_name = "John"
+character_age = 35
+
+# Using variables in strings
+puts "There once was a man named " + character_name
+puts "He was " + character_age.to_s + " years old"
+
+# Modifying variables
+character_name = "Mike"
+puts "But everybody called him " + character_name
+\end{lstlisting}
+
+\textbf{Key Points:}
+\begin{itemize}
+    \item Use lowercase with underscores for variable names
+    \item Convert numbers to strings with \texttt{.to\_s} when concatenating
+    \item Variables can be reassigned throughout the program
+\end{itemize}
+
+\section{Data Types}
+
+\subsection{Strings}
+Text data enclosed in quotes:
+\begin{lstlisting}
+name = "Mike"
+occupation = "programmer"
+\end{lstlisting}
+
+\subsection{Numbers}
+
+\textbf{Integers (whole numbers):}
+\begin{lstlisting}
+age = 75
+negative_age = -75
+\end{lstlisting}
+
+\textbf{Floats (decimal numbers):}
+\begin{lstlisting}
+gpa = 3.2
+temperature = -4.5
+\end{lstlisting}
+
+\subsection{Booleans}
+True or false values:
+\begin{lstlisting}
+is_male = true
+is_tall = false
+\end{lstlisting}
+
+\subsection{Nil}
+Represents "no value":
+\begin{lstlisting}
+flaws = nil
+\end{lstlisting}
+
+\section{Working with Strings}
+
+\subsection{String Methods}
+
+\begin{lstlisting}
+phrase = "Giraffe Academy"
+
+# Convert case
+puts phrase.upcase      # "GIRAFFE ACADEMY"
+puts phrase.downcase    # "giraffe academy"
+
+# Remove whitespace
+phrase = "   Giraffe Academy   "
+puts phrase.strip       # "Giraffe Academy"
+
+# String information
+puts phrase.length      # Returns number of characters
+puts phrase.include? "Academy"  # Returns true/false
+
+# Accessing characters
+puts phrase[0]          # First character (G)
+puts phrase[1]          # Second character (i)
+puts phrase[0, 3]       # Range: first 3 characters
+
+# Finding text
+puts phrase.index("A")  # Returns position of "A"
+\end{lstlisting}
+
+\subsection{Special Characters}
+
+\begin{lstlisting}
+# Quotation marks in strings
+puts "He said \"Hello\""
+
+# New line
+puts "Line 1\nLine 2"
+\end{lstlisting}
+
+\section{Math and Numbers}
+
+\subsection{Basic Arithmetic}
+
+\begin{lstlisting}
+puts 5 + 9      # Addition: 14
+puts 5 - 2      # Subtraction: 3
+puts 5 * 3      # Multiplication: 15
+puts 10 / 3     # Division: 3 (integer division)
+puts 10.0 / 3   # Division: 3.333\ldots{} (float division)
+
+# Exponents
+puts 2 ** 3     # 2 to the power of 3: 8
+
+# Modulus (remainder)
+puts 10 % 3     # Remainder of 10 / 3: 1
+\end{lstlisting}
+
+\subsection{Number Methods}
+
+\begin{lstlisting}
+num = -20.487
+
+puts num.abs        # Absolute value: 20.487
+puts num.round      # Round: -20
+puts num.ceil       # Ceiling: -20
+puts num.floor      # Floor: -21
+\end{lstlisting}
+
+\subsection{Math Class}
+
+\begin{lstlisting}
+puts Math.sqrt(36)  # Square root: 6.0
+puts Math.log(1)    # Natural logarithm: 0.0
+\end{lstlisting}
+
+\section{Getting User Input}
+
+\textbf{Important:} For user input, use Terminal instead of atom-runner.
+
+\begin{lstlisting}
+# Basic input
+puts "Enter your name: "
+name = gets.chomp
+
+puts "Enter your age: "
+age = gets.chomp
+
+puts "Hello " + name + ", you are " + age
+\end{lstlisting}
+
+\textbf{Key Points:}
+\begin{itemize}
+    \item \texttt{gets} gets user input
+    \item \texttt{chomp} removes the newline character
+    \item All input comes as strings - convert with \texttt{.to\_i} or \texttt{.to\_f}
+\end{itemize}
+
+\section{Building a Calculator}
+
+\begin{lstlisting}
+puts "Enter first number: "
+num1 = gets.chomp.to_f
+
+puts "Enter operator (+, -, *, /): "
+op = gets.chomp
+
+puts "Enter second number: "
+num2 = gets.chomp.to_f
+
+if op == "+"
+    puts num1 + num2
+elsif op == "-"
+    puts num1 - num2
+elsif op == "*"
+    puts num1 * num2
+elsif op == "/"
+    puts num1 / num2
+else
+    puts "Invalid operator"
+end
+\end{lstlisting}
+
+\section{Mad Libs Game}
+
+\begin{lstlisting}
+puts "Enter a color: "
+color = gets.chomp
+
+puts "Enter a plural noun: "
+plural_noun = gets.chomp
+
+puts "Enter a celebrity: "
+celebrity = gets.chomp
+
+puts "Roses are " + color
+puts plural_noun + " are blue"
+puts "I love " + celebrity
+\end{lstlisting}
+
+\section{Arrays}
+
+Arrays store multiple values in a single variable:
+
+\begin{lstlisting}
+# Creating arrays
+friends = Array["Kevin", "Karen", "Oscar"]
+# or
+friends = ["Kevin", "Karen", "Oscar"]
+
+# Accessing elements
+puts friends[0]     # "Kevin" (first element)
+puts friends[-1]    # "Oscar" (last element)
+puts friends[0, 2]  # First 2 elements
+
+# Modifying arrays
+friends[0] = "Dwight"
+friends[5] = "Holly"  # Creates nil elements in between
+
+# Array methods
+puts friends.length     # Number of elements
+puts friends.include? "Karen"  # true/false
+puts friends.reverse    # Reversed array
+puts friends.sort       # Sorted array
+\end{lstlisting}
+
+\section{Hashes}
+
+Hashes store key-value pairs:
+
+\begin{lstlisting}
+# Creating hashes
+states = {
+    "Pennsylvania" => "PA",
+    "New York" => "NY",
+    "Oregon" => "OR"
+}
+
+# Alternative syntax
+states = {
+    :Pennsylvania => "PA",
+    :New_York => "NY",
+    :Oregon => "OR"
+}
+
+# Accessing values
+puts states["Pennsylvania"]  # "PA"
+puts states[:Pennsylvania]   # "PA" (symbol key)
+\end{lstlisting}
+
+\section{Methods (Functions)}
+
+\begin{lstlisting}
+# Basic method
+def say_hi
+    puts "Hello User"
+end
+
+# Call the method
+say_hi
+
+# Method with parameters
+def say_hi(name, age)
+    puts "Hello " + name + ", you are " + age.to_s
+end
+
+say_hi("Mike", 25)
+
+# Method with default parameters
+def say_hi(name="No name", age=-1)
+    puts "Hello " + name + ", you are " + age.to_s
+end
+
+say_hi          # Uses defaults
+say_hi("Mike")  # Uses default age
+\end{lstlisting}
+
+\section{Return Statements}
+
+\begin{lstlisting}
+# Method that returns a value
+def cube(num)
+    return num * num * num
+    puts "This won't execute"  # Code after return is ignored
+end
+
+puts cube(3)  # Prints 27
+
+# Ruby automatically returns the last expression
+def cube(num)
+    num * num * num  # Implicit return
+end
+
+# Returning multiple values
+def get_name_and_age
+    return "Mike", 25
+end
+
+name, age = get_name_and_age
+\end{lstlisting}
+
+\section{If Statements}
+
+\subsection{Basic If Statements}
+
+\begin{lstlisting}
+is_male = true
+is_tall = false
+
+if is_male
+    puts "You are male"
+else
+    puts "You are not male"
+end
+
+# Multiple conditions
+if is_male and is_tall
+    puts "You are a tall male"
+elsif is_male and !is_tall
+    puts "You are a short male"
+elsif !is_male and is_tall
+    puts "You are not male but are tall"
+else
+    puts "You are not male and not tall"
+end
+\end{lstlisting}
+
+\subsection{Comparison Operators}
+
+\begin{lstlisting}
+# Comparisons
+def max(num1, num2, num3)
+    if num1 >= num2 and num1 >= num3
+        return num1
+    elsif num2 >= num1 and num2 >= num3
+        return num2
+    else
+        return num3
+    end
+end
+
+puts max(1, 2, 3)  # Returns 3
+\end{lstlisting}
+
+\textbf{Comparison operators:}
+\begin{itemize}
+    \item \texttt{==} equal to
+    \item \texttt{!=} not equal to
+    \item \texttt{>} greater than
+    \item \texttt{>=} greater than or equal to
+    \item \texttt{<} less than
+    \item \texttt{<=} less than or equal to
+\end{itemize}
+
+\section{Case Expressions}
+
+For checking multiple conditions against the same value:
+
+\begin{lstlisting}
+def get_day_name(day)
+    day_name = ""
+    
+    case day
+    when "mon"
+        day_name = "Monday"
+    when "tue"
+        day_name = "Tuesday"
+    when "wed"
+        day_name = "Wednesday"
+    when "thu"
+        day_name = "Thursday"
+    when "fri"
+        day_name = "Friday"
+    when "sat"
+        day_name = "Saturday"
+    when "sun"
+        day_name = "Sunday"
+    else
+        day_name = "Invalid abbreviation"
+    end
+    
+    return day_name
+end
+
+puts get_day_name("mon")  # "Monday"
+\end{lstlisting}
+
+\section{While Loops}
+
+\begin{lstlisting}
+# Basic while loop
+index = 1
+while index <= 5
+    puts index
+    index += 1  # Same as: index = index + 1
+end
+# Prints: 1, 2, 3, 4, 5
+
+# Be careful of infinite loops!
+# Make sure the condition eventually becomes false
+\end{lstlisting}
+
+\section{Building a Guessing Game}
+
+\begin{lstlisting}
+secret_word = "giraffe"
+guess = ""
+guess_count = 0
+guess_limit = 3
+out_of_guesses = false
+
+while guess != secret_word and !out_of_guesses
+    if guess_count < guess_limit
+        puts "Enter guess: "
+        guess = gets.chomp
+        guess_count += 1
+    else
+        out_of_guesses = true
+    end
+end
+
+if out_of_guesses
+    puts "You Lose!"
+else
+    puts "You Win!"
+end
+\end{lstlisting}
+
+\section{For Loops}
+
+\begin{lstlisting}
+# Loop through array
+friends = ["Kevin", "Karen", "Oscar"]
+for friend in friends
+    puts friend
+end
+
+# Loop through range
+for index in 0..5
+    puts index
+end
+
+# Using times method
+6.times do |index|
+    puts index
+end
+
+# Using each method
+friends.each do |friend|
+    puts friend
+end
+\end{lstlisting}
+
+\section{Building an Exponent Method}
+
+\begin{lstlisting}
+def pow(base_num, pow_num)
+    result = 1
+    pow_num.times do
+        result = result * base_num
+    end
+    return result
+end
+
+puts pow(2, 3)  # 2^3 = 8
+puts pow(5, 2)  # 5^2 = 25
+\end{lstlisting}
+
+\section{Comments}
+
+\begin{lstlisting}
+# This is a single line comment
+
+puts "Hello World"  # Comment after code
+
+# Multiple line comments
+# Line 1 of comment
+# Line 2 of comment
+
+=begin
+Multi-line comment block
+Everything here is ignored
+=end
+\end{lstlisting}
+
+\section{Reading Files}
+
+\begin{lstlisting}
+# Reading entire file
+File.open("employees.txt", "r") do |file|
+    puts file.read
+end
+
+# Reading line by line
+File.open("employees.txt", "r") do |file|
+    puts file.readline  # First line
+    puts file.readline  # Second line
+end
+
+# Reading all lines into array
+File.open("employees.txt", "r") do |file|
+    for line in file.readlines
+        puts line
+    end
+end
+
+# Alternative way to open files
+file = File.open("employees.txt", "r")
+puts file.read
+file.close  # Always close files opened this way
+\end{lstlisting}
+
+\section{Writing Files}
+
+\begin{lstlisting}
+# Append to file
+File.open("employees.txt", "a") do |file|
+    file.write("\nOscar, Accounting")
+end
+
+# Overwrite file
+File.open("employees.txt", "w") do |file|
+    file.write("Angela, Accounting")
+end
+
+# Create new file
+File.open("index.html", "w") do |file|
+    file.write("<h1>Hello World</h1>")
+end
+
+# Read and write
+File.open("employees.txt", "r+") do |file|
+    file.readline  # Move cursor to next line
+    file.write("Overwritten")
+end
+\end{lstlisting}
+
+\section{Handling Errors}
+
+\begin{lstlisting}
+# Basic error handling
+begin
+    num = 10 / 0
+rescue
+    puts "Error occurred"
+end
+
+# Handling specific errors
+begin
+    num = 10 / 0
+    puts nums[5]
+rescue ZeroDivisionError
+    puts "Division by zero error"
+rescue TypeError => e
+    puts "Type error: " + e.to_s
+end
+\end{lstlisting}
+
+\section{Classes and Objects}
+
+\subsection{Creating a Class}
+
+\begin{lstlisting}
+class Book
+    attr_accessor :title, :author, :pages
+    
+    def initialize(title, author, pages)
+        @title = title
+        @author = author
+        @pages = pages
+    end
+    
+    def is_long?
+        return @pages > 300
+    end
+end
+
+# Creating objects
+book1 = Book.new("Harry Potter", "JK Rowling", 400)
+book2 = Book.new("Lord of the Rings", "Tolkien", 500)
+
+# Using objects
+puts book1.title
+puts book1.is_long?
+\end{lstlisting}
+
+\subsection{Object Methods}
+
+\begin{lstlisting}
+class Student
+    attr_accessor :name, :major, :gpa
+    
+    def initialize(name, major, gpa)
+        @name = name
+        @major = major
+        @gpa = gpa
+    end
+    
+    def has_honors
+        if @gpa >= 3.5
+            return true
+        else
+            return false
+        end
+    end
+end
+
+student1 = Student.new("Jim", "Business", 2.6)
+student2 = Student.new("Pam", "Art", 3.6)
+
+puts student1.has_honors  # false
+puts student2.has_honors  # true
+\end{lstlisting}
+
+\section{Building a Quiz}
+
+\begin{lstlisting}
+class Question
+    attr_accessor :prompt, :answer
+    
+    def initialize(prompt, answer)
+        @prompt = prompt
+        @answer = answer
+    end
+end
+
+p1 = "What color are apples?\n(a) red\n(b) purple\n(c) orange"
+p2 = "What color are bananas?\n(a) pink\n(b) red\n(c) yellow"
+p3 = "What color are pears?\n(a) yellow\n(b) green\n(c) orange"
+
+questions = [
+    Question.new(p1, "a"),
+    Question.new(p2, "c"),
+    Question.new(p3, "b")
+]
+
+def run_test(questions)
+    answer = ""
+    score = 0
+    
+    for question in questions
+        puts question.prompt
+        answer = gets.chomp
+        if answer == question.answer
+            score += 1
+        end
+    end
+    
+    puts "You got " + score.to_s + "/" + questions.length.to_s
+end
+
+run_test(questions)
+\end{lstlisting}
+
+\section{Inheritance}
+
+\begin{lstlisting}
+# Base class
+class Chef
+    def make_chicken
+        puts "The chef makes chicken"
+    end
+    
+    def make_salad
+        puts "The chef makes salad"
+    end
+    
+    def make_special_dish
+        puts "The chef makes BBQ ribs"
+    end
+end
+
+# Subclass inheriting from Chef
+class ItalianChef < Chef
+    def make_special_dish  # Override parent method
+        puts "The chef makes eggplant parm"
+    end
+    
+    def make_pasta  # New method specific to ItalianChef
+        puts "The chef makes pasta"
+    end
+end
+
+chef = Chef.new
+italian_chef = ItalianChef.new
+
+chef.make_special_dish          # "BBQ ribs"
+italian_chef.make_special_dish  # "eggplant parm"
+italian_chef.make_pasta         # Only available to ItalianChef
+\end{lstlisting}
+
+\section{Modules}
+
+Create a separate file \texttt{useful\_tools.rb}:
+
+\begin{lstlisting}
+module Tools
+    def self.say_hi(name)
+        puts "Hello " + name
+    end
+    
+    def self.say_bye(name)
+        puts "Goodbye " + name
+    end
+end
+\end{lstlisting}
+
+Use in main file:
+
+\begin{lstlisting}
+require_relative "useful_tools"
+
+Tools.say_hi("Mike")
+Tools.say_bye("Mike")
+\end{lstlisting}
+
+\section{Interactive Ruby (IRB)}
+
+IRB allows you to test Ruby code interactively:
+
+\begin{lstlisting}[language=bash]
+# In Terminal
+irb
+
+# Now you can type Ruby code directly:
+puts "Hello World"
+2 + 3
+name = "Mike"
+puts name
+
+# Exit IRB
+exit
+\end{lstlisting}
+
+\section{Best Practices}
+
+\begin{itemize}
+    \item Use descriptive variable and method names
+    \item Use \texttt{snake\_case} for variables and methods
+    \item Use \texttt{CamelCase} for class names
+    \item Always close files when not using blocks
+    \item Handle potential errors with begin/rescue
+    \item Use comments sparingly and only when necessary
+    \item Keep methods short and focused on one task
+    \item Use modules to organize related methods
+\end{itemize}
+
+\section{Advanced Topics for Intermediate Ruby Developers}
+
+After mastering the basics, these advanced topics will help you become a professional Ruby developer:
+
+\subsection{Modern Development Environment}
+
+\subsubsection{Version Management}
+Use ASDF (recommended in 2024-2025) for managing Ruby versions:
+
+\begin{lstlisting}[language=bash]
+# Install ASDF
+brew install asdf
+
+# Add Ruby plugin
+asdf plugin add ruby
+
+# Install latest Ruby
+asdf install ruby latest
+asdf global ruby latest
+\end{lstlisting}
+
+\subsubsection{Modern Editor Setup}
+For VS Code with Ruby LSP (the modern standard):
+
+\begin{enumerate}
+    \item Install the "Ruby LSP" extension
+    \item Install the "Ruby Solargraph" extension for additional features
+    \item Configure settings for auto-formatting and linting
+\end{enumerate}
+
+\subsection{Advanced Language Features}
+
+\subsubsection{Blocks, Procs, and Lambdas}
+
+\begin{lstlisting}
+# Blocks - anonymous functions passed to methods
+[1, 2, 3].each { |num| puts num * 2 }
+
+# Procs - objects that wrap blocks
+double_proc = Proc.new { |x| x * 2 }
+[1, 2, 3].map(&double_proc)
+
+# Lambdas - special procs with method-like behavior
+double_lambda = lambda { |x| x * 2 }
+# or using stabby lambda syntax
+double_lambda = ->(x) { x * 2 }
+
+# Key differences:
+# -- Lambdas check argument count, procs don't
+# -- return in lambda returns from lambda, in proc returns from enclosing method
+\end{lstlisting}
+
+\subsubsection{Metaprogramming Basics}
+
+\begin{lstlisting}
+# Dynamic method definition
+class DynamicClass
+  %w[name age email].each do |attr|
+    define_method(attr) do
+      instance_variable_get("@#{attr}")
+    end
+    
+    define_method("#{attr}=") do |value|
+      instance_variable_set("@#{attr}", value)
+    end
+  end
+end
+
+# method_missing for flexible APIs
+class FlexibleHash
+  def initialize
+    @data = {}
+  end
+  
+  def method_missing(method_name, *args)
+    if method_name.to_s.end_with?('=')
+      @data[method_name.to_s.chomp('=')] = args.first
+    else
+      @data[method_name.to_s]
+    end
+  end
+end
+
+obj = FlexibleHash.new
+obj.name = "Ruby"
+puts obj.name  # "Ruby"
+\end{lstlisting}
+
+\subsubsection{Advanced Enumerable Operations}
+
+\begin{lstlisting}
+# Lazy evaluation for large datasets
+(1..Float::INFINITY).lazy
+  .select(&:even?)
+  .take(10)
+  .to_a  # [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
+
+# Custom enumerators
+class Fibonacci
+  include Enumerable
+  
+  def each
+    a, b = 0, 1
+    loop do
+      yield a
+      a, b = b, a + b
+    end
+  end
+end
+
+Fibonacci.new.take(10)  # [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+\end{lstlisting}
+
+\subsection{Testing Frameworks}
+
+\subsubsection{RSpec (Industry Standard)}
+
+Install and setup:
+\begin{lstlisting}[language=bash]
+# Add to Gemfile
+gem 'rspec'
+
+# Generate RSpec configuration
+rspec --init
+\end{lstlisting}
+
+Basic RSpec example:
+\begin{lstlisting}
+# spec/calculator_spec.rb
+require 'rspec'
+
+describe Calculator do
+  describe '#add' do
+    it 'adds two numbers correctly' do
+      calculator = Calculator.new
+      result = calculator.add(2, 3)
+      expect(result).to eq(5)
+    end
+    
+    context 'with negative numbers' do
+      it 'handles negative numbers' do
+        calculator = Calculator.new
+        result = calculator.add(-2, 3)
+        expect(result).to eq(1)
+      end
+    end
+  end
+end
+\end{lstlisting}
+
+\subsubsection{Debugging with Pry}
+
+\begin{lstlisting}
+# Add to Gemfile
+gem 'pry-byebug'
+
+# Usage in code
+def complex_method
+  data = fetch_data
+  binding.pry  # Debugger will stop here
+  process_data(data)
+end
+
+# Debugging commands:
+# next - next line
+# step - step into method
+# continue - continue execution
+# whereami - show current location
+\end{lstlisting}
+
+\subsection{Code Quality Tools}
+
+\subsubsection{RuboCop Configuration}
+
+\begin{lstlisting}
+# .rubocop.yml
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+
+Style/Documentation:
+  Enabled: false
+
+Metrics/LineLength:
+  Max: 120
+
+Metrics/MethodLength:
+  Max: 20
+\end{lstlisting}
+
+\subsubsection{SimpleCov for Test Coverage}
+
+\begin{lstlisting}
+# Add to spec_helper.rb or test_helper.rb
+require 'simplecov'
+SimpleCov.start do
+  add_filter '/spec/'
+  add_filter '/test/'
+end
+
+# This will generate coverage reports in coverage/
+\end{lstlisting}
+
+\subsection{Essential Gems for Professional Development}
+
+\subsubsection{Must-Have Development Gems}
+
+\begin{lstlisting}[language=ruby]
+# Gemfile
+group :development, :test do
+  gem 'rspec-rails'
+  gem 'factory_bot_rails'
+  gem 'pry-byebug'
+  gem 'rubocop'
+  gem 'simplecov'
+end
+
+group :test do
+  gem 'capybara'      # Browser automation
+  gem 'webmock'       # HTTP request stubbing
+end
+
+# Production gems
+gem 'faraday'         # HTTP client
+gem 'sidekiq'         # Background jobs
+gem 'redis'           # Caching and sessions
+\end{lstlisting}
+
+\subsection{Database Best Practices}
+
+\subsubsection{ActiveRecord Optimization}
+
+\begin{lstlisting}
+# Avoid N+1 queries
+users = User.includes(:posts).where(active: true)
+
+# Use find_each for large datasets
+User.find_each(batch_size: 1000) do |user|
+  # Process each user
+end
+
+# Select specific columns
+User.select(:id, :name, :email).where(active: true)
+
+# Use scopes for reusable queries
+class User < ApplicationRecord
+  scope :active, -> { where(active: true) }
+  scope :recent, -> { where('created_at > ?', 1.week.ago) }
+end
+\end{lstlisting}
+
+\subsection{Web Development Frameworks}
+
+\subsubsection{Ruby on Rails (Most Popular)}
+
+\begin{lstlisting}[language=bash]
+# Install Rails
+gem install rails
+
+# Create new application
+rails new my_app --database=postgresql
+
+# Generate scaffold
+rails generate scaffold Post title:string content:text
+
+# Run migrations
+rails db:migrate
+
+# Start server
+rails server
+\end{lstlisting}
+
+\subsubsection{Sinatra (Lightweight)}
+
+\begin{lstlisting}
+# app.rb
+require 'sinatra'
+
+get '/' do
+  'Hello World!'
+end
+
+get '/users/:id' do
+  user = User.find(params[:id])
+  user.to_json
+end
+
+post '/users' do
+  user = User.create(JSON.parse(request.body.read))
+  user.to_json
+end
+\end{lstlisting}
+
+\subsection{Performance Optimization}
+
+\subsubsection{Memory Management}
+
+\begin{lstlisting}
+# Use symbols for repeated identifiers
+hash = { name: 'Ruby', type: 'Language' }  # Good
+hash = { 'name' => 'Ruby', 'type' => 'Language' }  # Creates new strings
+
+# Memoization for expensive operations
+def expensive_calculation
+  @result ||= begin
+    # Expensive computation here
+    complex_algorithm
+  end
+end
+
+# Use lazy evaluation for large collections
+large_array.lazy.map(&:expensive_operation).take(10)
+\end{lstlisting}
+
+\subsubsection{Benchmarking}
+
+\begin{lstlisting}
+require 'benchmark'
+
+# Compare different approaches
+Benchmark.bm do |x|
+  x.report("each:") { array.each { |item| process(item) } }
+  x.report("map:") { array.map { |item| process(item) } }
+end
+
+# Using benchmark-ips gem
+require 'benchmark/ips'
+
+Benchmark.ips do |x|
+  x.report("string interpolation") { "Hello #{name}!" }
+  x.report("string concatenation") { "Hello " + name + "!" }
+  x.compare!
+end
+\end{lstlisting}
+
+\subsection{Security Best Practices}
+
+\begin{lstlisting}
+# Input validation
+class User < ApplicationRecord
+  validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :age, numericality: { greater_than: 0, less_than: 150 }
+end
+
+# SQL injection prevention
+User.where("name = ?", params[:name])  # Good
+User.where("name = '#{params[:name]}'")  # BAD - SQL injection risk
+
+# XSS prevention in views (Rails automatically escapes)
+<%= user.name %>  # Automatically escaped
+<%== user.bio %>  # Raw HTML (use carefully)
+\end{lstlisting}
+
+\subsection{Creating and Publishing Gems}
+
+\begin{lstlisting}[language=bash]
+# Create new gem
+bundle gem my_gem
+
+# Gem structure
+my_gem/
+|-- lib/
+|   \-- my_gem.rb
+|-- spec/
+|-- my_gem.gemspec
+|-- Gemfile
+\-- README.md
+
+# Build and publish
+gem build my_gem.gemspec
+gem push my_gem-1.0.0.gem
+\end{lstlisting}
+
+\section{Ruby Style Guide and Community Standards}
+
+Follow the community Ruby Style Guide:
+
+\begin{itemize}
+    \item Use 2 spaces for indentation
+    \item Line length: 80-120 characters
+    \item Use \texttt{snake\_case} for variables and methods
+    \item Use \texttt{CamelCase} for classes and modules
+    \item Use \texttt{SCREAMING\_SNAKE\_CASE} for constants
+    \item Prefer single quotes for strings unless interpolation is needed
+    \item Use trailing commas in multi-line arrays and hashes
+\end{itemize}
+
+\section{Next Steps for Professional Ruby Development}
+
+After mastering these intermediate concepts:
+
+\begin{itemize}
+    \item Learn Ruby on Rails in depth for web development
+    \item Study design patterns and clean architecture
+    \item Master test-driven development (TDD) and behavior-driven development (BDD)
+    \item Explore advanced metaprogramming and DSL creation
+    \item Learn about Ruby internals and performance optimization
+    \item Contribute to open source Ruby projects
+    \item Study concurrent programming with Ruby fibers and threads
+    \item Learn DevOps practices for Ruby applications (Docker, CI/CD)
+\end{itemize}
+
+\section{Recommended Learning Resources}
+
+\textbf{Books:}
+\begin{itemize}
+    \item "Metaprogramming Ruby 2" by Paolo Perrotta
+    \item "Practical Object-Oriented Design in Ruby" by Sandi Metz
+    \item "Ruby Under a Microscope" by Pat Shaughnessy
+    \item "Rails Antipatterns" by Chad Pytel and Tammer Saleh
+\end{itemize}
+
+\textbf{Online Resources:}
+\begin{itemize}
+    \item Ruby Style Guide: \url{https://rubystyle.guide/}
+    \item RubyGems.org for exploring gems
+    \item Ruby Weekly newsletter
+    \item RubyFlow community news
+    \item Ruby Documentation: \url{https://ruby-doc.org/}
+\end{itemize}
+
+\end{document}
